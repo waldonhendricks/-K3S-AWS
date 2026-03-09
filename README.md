@@ -32,7 +32,7 @@ Record the values — you will need them throughout this guide:
 
 | Hostname | Private IP | Public IP |
 |----------|------------|-----------|
-| k3s-master-1 | 172.31.43.220 | 54.221.4.21 |
+| k3s-master-1 | 172.31.43.220 | 35.168.13.127 |
 | k3s-master-2 | 172.31.38.33 | 100.55.14.67 |
 | k3s-master-3 | 172.31.39.5 | 54.172.112.146 |
 
