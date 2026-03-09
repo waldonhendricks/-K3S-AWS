@@ -27,102 +27,14 @@ This guide walks you through deploying a **K3s HA cluster with 3 master (server)
 
 ## Step 1: AWS Infrastructure Setup
 
-### 1.1 — Variables (set once, reuse throughout)
-
-```sh
-export AWS_REGION="us-east-1"
-export KEY_NAME="my-k3s-key"        # existing EC2 key pair name
-export VPC_ID=$(aws ec2 describe-vpcs \
-  --filters "Name=isDefault,Values=true" \
-  --query "Vpcs[0].VpcId" --output text \
-  --region $AWS_REGION)
-export SUBNET_ID=$(aws ec2 describe-subnets \
-  --filters "Name=vpc-id,Values=$VPC_ID" \
-  --query "Subnets[0].SubnetId" --output text \
-  --region $AWS_REGION)
-```
-
-### 1.2 — Create a Security Group
-
-```sh
-export SG_ID=$(aws ec2 create-security-group \
-  --group-name k3s-ha-sg \
-  --description "K3s HA cluster security group" \
-  --vpc-id $VPC_ID \
-  --region $AWS_REGION \
-  --query GroupId --output text)
-
-# SSH
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol tcp --port 22 --cidr 0.0.0.0/0 --region $AWS_REGION
-
-# Kubernetes API server
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol tcp --port 6443 --cidr 0.0.0.0/0 --region $AWS_REGION
-
-# etcd (inter-node only — restrict to the SG itself)
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol tcp --port 2379-2380 --source-group $SG_ID --region $AWS_REGION
-
-# Kubelet
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol tcp --port 10250 --source-group $SG_ID --region $AWS_REGION
-
-# Flannel VXLAN
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol udp --port 8472 --source-group $SG_ID --region $AWS_REGION
-
-# NodePort range (for test applications)
-aws ec2 authorize-security-group-ingress --group-id $SG_ID \
-  --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 --region $AWS_REGION
-
-echo "Security group: $SG_ID"
-```
-
-### 1.3 — Launch 3 x t3.large Instances
-
-```sh
-# Ubuntu 22.04 LTS AMI (update the ami-* ID for your region)
-export AMI_ID="ami-0c7217cdde317cfec"   # us-east-1 Ubuntu 22.04 LTS
-
-for i in 1 2 3; do
-  aws ec2 run-instances \
-    --image-id $AMI_ID \
-    --instance-type t3.large \
-    --key-name $KEY_NAME \
-    --security-group-ids $SG_ID \
-    --subnet-id $SUBNET_ID \
-    --associate-public-ip-address \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=k3s-master-$i}]" \
-    --region $AWS_REGION \
-    --query "Instances[0].InstanceId" --output text
-done
-```
-
-> **Note:** Replace `ami-0c7217cdde317cfec` with the latest Ubuntu 22.04 LTS AMI for your region. Find it with:
-> ```sh
-> aws ec2 describe-images --owners 099720109477 \
->   --filters "Name=name,Values=ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*" \
->   --query "sort_by(Images,&CreationDate)[-1].ImageId" \
->   --output text --region $AWS_REGION
-> ```
-
-### 1.4 — Note the Private and Public IPs
-
-```sh
-aws ec2 describe-instances \
-  --filters "Name=tag:Name,Values=k3s-master-*" "Name=instance-state-name,Values=running" \
-  --query "Reservations[*].Instances[*].[Tags[?Key=='Name']|[0].Value,PrivateIpAddress,PublicIpAddress]" \
-  --output table --region $AWS_REGION
-```
 
 Record the values — you will need them throughout this guide:
 
 | Hostname | Private IP | Public IP |
 |----------|------------|-----------|
 | k3s-master-1 | 172.31.43.220 | 54.221.4.21 |
-| k3s-master-2 | 10.0.x.x | 1.2.3.5 |
-| k3s-master-3 | 10.0.x.x | 1.2.3.6 |
+| k3s-master-2 | 172.31.38.33 | 100.55.14.67 |
+| k3s-master-3 | 172.31.39.5 | 54.172.112.146 |
 
 ---
 
