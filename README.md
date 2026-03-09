@@ -10,7 +10,7 @@ This guide walks you through deploying a **K3s HA cluster with 3 master (server)
 
 | Role | Count | Instance type | OS |
 |------|-------|---------------|----|
-| K3s server (master) | 3 | t3.large (2 vCPU / 8 GiB RAM) | Ubuntu 22.04 LTS |
+| K3s server (master) | 3 | t3.large (2 vCPU / 8 GiB RAM) | Ubuntu 24.04 LTS |
 
 `t3.large` provides enough CPU and RAM to run the K3s control plane (etcd, API server, scheduler, controller-manager) alongside application workloads. All 3 nodes form an HA control plane backed by embedded etcd. Worker nodes can be added later (see [Step 9](#step-9-optional-adding-worker-nodes)).
 
